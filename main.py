@@ -45,15 +45,15 @@ c3 = deepcopy(c1)
 
 tr_ds1,ts_ds1 = in1(pth, trlimit = 1500,tslimit=600)
 
-c1.train(tr_ds1, gamma=0.5, iterations=50)
+c1.train(tr_ds1, gamma=0.0.01, iterations=10000)
 
 tr_ds2,ts_ds2 = in2(pth, trlimit = 1500,tslimit=300)
 
-c2.train(tr_ds2, gamma=0.5, iterations=50)
+c2.train(tr_ds2, gamma=0.0.1, iterations=10000)
 
 tr_ds3,ts_ds3 = in1(pth, trlimit = 1500,tslimit=300)
 
-c3.train(tr_ds3, gamma=0.5, iterations=50)
+c3.train(tr_ds3, gamma=0.0.1, iterations=10000)
 
 # c4
 def classify(input_val):
