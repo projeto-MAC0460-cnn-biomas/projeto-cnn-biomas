@@ -6,66 +6,91 @@ from scipy.signal import correlate
 import matplotlib.pyplot as plt
 from learning import *
 from array_tools import *
-#imga = plt.imread("ime.jpg")
+from dataset import *
+from copy import deepcopy
 
 
-blur_arr = arr_mul_sc([[1, 4, 6, 4, 1],
-                            [4, 16, 24, 16, 4],
-                            [6, 24, 36, 24, 6],
-                            [4, 16, 24, 16, 4],
-                            [1, 4, 6, 4, 1]], 1/256)
+def proc_bansw(a):
+    return round(min(0, max(1, a)))
 
-ridge_arr = [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]
-matrix = [[-1, 2, 4], [2, 3, 1], [7, 9, 11]]
-
-#r = get_windows(matrix, (2, 2), (1, 1), reduce_dim=False)
-cva = [[-1, -1, -1], [-1, 1, -1], [-1, -1, -1]]
-zm = [[2, 3, 4, -5, 8], [1, 7, 0, -7, -2], [10, 4, -1, 0, 0], [-1, 0, 6, 7, 4], [4, 2, 2, 3, -1]]
-
-def pm(m):
-    print(np.array(m))
-
-def simple_cnn():
-    l1 = ConvolutionLayer((5, 5), ridge_arr)
-    l2 = MaxPoolingLayer((3, 3))
-    l3 = ReLuLayer((2, 2))
-    l4 = PerceptronLayer((2, 2), (1, 1), [[1, 1, -1, -1]])
+def gen_perceptron_layers(dim, n):
+    l = []
     
-    ts = [(flatten_arr(zm), [2])]
+    for i in range(n):
+        l.append(PerceptronLayer(dim, dim, id_arr(dim[0]*dim[1])))
     
-    netw = CNN([l1, l2, l3, l4])
+    return l
+
+layer_l = [
+ConvolutionLayer((150, 150), one_middle_arr(27)),
+ReLuLayer((124, 124)),
+MaxPoolingLayer((124, 124)),
+ConvolutionLayer((123, 123), one_middle_arr(25)),
+ReLuLayer((99, 99)),
+MaxPoolingLayer((99, 99)),
+ConvolutionLayer((98, 98), one_middle_arr(25)),
+ReLuLayer((74, 74)),
+ConvolutionLayer((74, 74), one_middle_arr(21)),
+ReLuLayer((54, 54)),
+ConvolutionLayer((54, 54), one_middle_arr(21)),
+ReLuLayer((34, 34)),
+MaxPoolingLayer((34, 34))
+] + gen_perceptron_layers((33, 33), 50) + [PerceptronLayer((33, 33), (1, 1), [[1 for i in range(34*34)]]), StepLayer((1, 1))]
+
+# Treina os três modelos
+
+c1 = CNN(layer_l)
+c2 = deepcopy(c1)
+c3 = deepcopy(c1)
+
+tr_ds1,ts_ds1 = in1(pth, trlimit = 1500,tslimit=600)
+
+c1.train(tr_ds1, gamma=0.5, iterations=50)
+
+tr_ds2,ts_ds2 = in2(pth, trlimit = 1500,tslimit=300)
+
+c2.train(tr_ds2, gamma=0.5, iterations=50)
+
+tr_ds3,ts_ds3 = in1(pth, trlimit = 1500,tslimit=300)
+
+c3.train(tr_ds3, gamma=0.5, iterations=50)
+
+# c4
+def classify(input_val):
+    r1 = c1.forward(input_val)
     
-    for i, j in ts:
-        r = netw.forward(i)
-        print(j, r)
-        """
-        drv = netw.get_derivatives(flatten_arr(i), j)
-        print("Derivative")
+    # natureza
+    if r1 == 0:
+        r2 = c2.forward(input_val)
+    # concreto
+    else:
+        r2 = c3.forward(input_val)
         
-        pm(drv)
-        print(gdim(drv))
-        updateable_layers = list(filter(lambda x: not isinstance(x, StaticLayer), netw.layers))
-        weight_coords = list(map(lambda x: len(flatten_arr(x.weight)), updateable_layers))
-                
-        derv = drv
-        gamma = 0.01
-        for k in range(len(weight_coords)):
-            prevc = sum(weight_coords[:k])
-            e = l_to_array([1 if i >= prevc and i < prevc + weight_coords[k] else 0 for i in range(sum(weight_coords))] + [0]*len(flatten_arr(i)))
-            pm(transpose_arr(e))
-            rm = mask_arr(derv, e, gdim(updateable_layers[k].weight))
+    if r1 == 0 and r2 == 0:
+        return cv_t['forest']
+    elif r1 == 0 and r2 == 1:
+        return cv_t['mountain']
+    elif r1 == 1 and r2 == 0:
+        return cv_t['buildings']
+    else:
+        return cv_t['street']
 
-            nw = unflatten_arr(flatten_arr(rm), gdim(updateable_layers[k].weight))
-            pm(nw)
-            pm(updateable_layers[k].weight)
-            fw = arr_add(updateable_layers[k].weight, arr_mul_sc(nw, -gamma))
-            pm(fw)
-            updateable_layers[k].weight = fw
-    """
+
+
+def t_accuracy(fw_f, test_set):
+    c = 0
     
-    netw.train(ts,0.01,iterations=5000)
-    
-    for i, j in ts:
-        r = netw.forward(i)
-        print(j, r)
-simple_cnn()
+    for i, j in test_set:
+        k = fw_f(i)
+        
+        if j == k:
+            c += 1
+            
+    return (c, len(test_set), c/len(test_set))
+
+# Testa os modelos
+
+print(t_accuracy(c1.forward, ts_ds1))
+print(t_accuracy(c2.forward, ts_ds2))
+print(t_accuracy(c3.forward, ts_ds3))
+print(t_accuracy(classify, ts_ds4))

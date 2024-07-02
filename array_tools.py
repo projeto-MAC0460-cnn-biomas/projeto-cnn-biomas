@@ -61,6 +61,7 @@ def gdim(arr):
 
 
 def flatten_arr(arr):
+
     n, m = gdim(arr)
     return [arr[i][j] for j in range(m) for i in range(n)]
 
@@ -268,6 +269,11 @@ def rgb_gray(r, g, b):
 
 def zeroes_arr(n, m):
     return [[0 for j in range(m)] for i in range(n)]
+    
+def one_middle_arr(n):
+    r = [[0 for j in range(n)] for i in range(n)]
+    r[n//2][n//2] = 1
+    return r
 
 def dglue(a, b):
     n, m = gdim(a)

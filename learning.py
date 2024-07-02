@@ -16,7 +16,7 @@ class NeuralNetwork:
         if len(layers) > 1:
             for i in range(len(layers) - 1):
                 if layers[i].output_m != layers[ i + 1].input_n:
-                    raise InvalidNNSequenceException("Layer {0: n} has output length {2: n} and layer {1:n} has input length {3:n}", i, i + 1, layers[i].output_m, layers[i + 1].input_n)
+                    raise InvalidNNSequenceException("Layer {0: n} has output length {2: n} and layer {1:n} has input length {3:n}".format(i, i + 1, layers[i].output_m, layers[i + 1].input_n))
         self.layers = layers
         self.original_layers = layers
     
@@ -38,7 +38,7 @@ class CNN(NeuralNetwork):
         if len(layers) > 1:
             for i in range(len(layers) - 1):
                 if layers[i].output_dim != layers[i + 1].input_dim:
-                    raise InvalidNNSequenceException("Layer {0: n} has output dimension {2: n} and layer {1:n} has input length {3:n}", i, i + 1, layers[i].output_dim, layers[i + 1].input_dim)
+                    raise InvalidNNSequenceException("Layer {0: n} has output dimension {2} and layer {1:n} has input length {3}".format(i, i + 1, str(layers[i].output_dim), str(layers[i + 1].input_dim)))
         
         super().__init__(layers)
     
@@ -169,9 +169,8 @@ class ConvolutionLayer(CNNLayer):
         return apply_convolution(input_val, self.weight, reduce_dim=True)
     
     def derivative(self, input_val):
-        imatrix = unflatten_arr(input_val, self.input_dim)
+        imatrix = unflatten_arr(flatten_arr(input_val), self.input_dim)
         n, m = self.input_dim
-        
         w_inds = get_windows_reduced_inds(imatrix, gdim(self.weight), (self.cvc, self.cvc))
         l0 = []
         
@@ -207,8 +206,25 @@ class ReLuLayer(StaticLayer):
         return [[(1 if flex_g0(input_val[i]) else 0) if i == j else 0 for j in range(n)] for i in range(n)]
 
 class SgnLayer(StaticLayer):
+    def __init__(self, input_dim):
+        super().__init__(input_dim, input_dim)
     def apply_forward(self, input_val):
         return map_arr(input_val, sgn)
+    def derivative(self, input_val):
+        n = self.input_n
+        
+        return id_arr(n)
+    
+class StepLayer(StaticLayer):
+    def __init__(self, input_dim):
+        super().__init__(input_dim, input_dim)
+    def apply_forward(self, input_val):
+        return map_arr(input_val, stepf)
+    
+    def derivative(self, input_val):
+        n = self.input_n
+        
+        return id_arr(n)
 
 class PoolingLayer(StaticLayer):
     def __init__(self, input_dim, output_dim, operation, opdim, opcenter=(0, 0), def_val=[0, 0, 0]):

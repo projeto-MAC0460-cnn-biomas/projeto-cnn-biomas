@@ -4,22 +4,81 @@ from random import sample
 from PIL import Image
 from os import walk
 
-gs = np.vectorize(lambda x: rgb_gray(*x))
+pth = './dataset'
 
-cv_table = {}
+cv_t = {
+    'buildings': 0,
+    'street': 1,
+    'forest': 2,
+    'mountain': 3,
+    'glacier': 4,
+    'sea': 5
+    
+}
+
+def in1(path, trlimit=None, tslimit=None):
+    cv_table = {
+        'buildings': 0,
+        'street': 0,
+        'forest': 1,
+        'mountain': 1
+    }
+    
+    wl = ['buildings', 'street', 'forest', 'mountain']
+    
+    trns = load_imgs(path + '/seg_train', cv_table=cv_table, wl=wl, limit=trlimit)
+    tsts = load_imgs(path + '/seg_test', cv_table=cv_table, wl=wl, limit=tslimit)
+    return trns, tsts
+    
+def in2(path, limit=None):
+    cv_table = {
+        'forest': 0,
+        'mountain': 1
+    }
+    
+    wl = ['forest', 'mountain']
+    
+    trns = load_imgs(path + '/seg_train', cv_table=cv_table, wl=wl, limit=trlimit)
+    tsts = load_imgs(path + '/seg_test', cv_table=cv_table, wl=wl, limit=tslimit)
+    return trns, tsts
+    
+def in3(path, limit=None):
+    cv_table = {
+        'buildings': 0,
+        'street': 1
+    }
+    
+    wl = ['buildings', 'street']
+    
+    trns = load_imgs(path + '/seg_train', cv_table=cv_table, wl=wl, limit=trlimit)
+    tsts = load_imgs(path + '/seg_test', cv_table=cv_table, wl=wl, limit=tslimit)
+    return trns, tsts
+
+def in4(path, limit=None):
+    cv_table = {
+        'buildings': 0,
+        'street': 1,
+        'forest': 2,
+        'mountain': 3
+    }
+    
+    wl = ['buildings', 'street', 'forest', 'mountain']
+    
+    trns = load_imgs(path + '/seg_train', cv_table=cv_table, wl=wl, limit=trlimit)
+    tsts = load_imgs(path + '/seg_test', cv_table=cv_table, wl=wl, limit=tslimit)
+    return trns, tsts
 
 def initialize_dataset(path, limit=None):
-    test_fl = next(walk(path + "/seg_test"))[2]
-    train_fl = next(walk(path + "/seg_train"))[2]
-    ds = []
+    pass
     
     
 def nominal_load(path, cv_table=None, wl=None, limit=None):
-    cl = next(walk(path))[2]
+    cl = next(walk(path))[1]
+    # print(next(walk(path + "/")))
     
     if wl is not None:
         cl = list(filter(lambda x: x in wl, cl))
-    
+    # print("CL", cl, path)
     ds = []
     
     for i in cl:
@@ -41,5 +100,11 @@ def nominal_load(path, cv_table=None, wl=None, limit=None):
         ds = ds + cds
     return ds
 
+def load_imgs(path, cv_table=None, wl=None, limit=None):
+    fls = nominal_load(path, cv_table=cv_table, wl=wl, limit=limit)
+    
+    return [(load_img(i), j) for i, j in fls]
+    
+
 def load_img(path):
-    return gs(np.array(Image.open(path))).tolist()
+    return map_arr(np.array(Image.open(path)).tolist(), lambda x: rgb_gray(*x))
