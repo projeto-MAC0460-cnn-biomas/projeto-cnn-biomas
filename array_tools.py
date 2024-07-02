@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 from math import exp
 from functools import reduce
+from math import sqrt
 
 def get_windows(arr, dim, center_pos, reduce_dim=True, edge_v=0):
     if reduce_dim:
@@ -27,7 +28,17 @@ def get_windows_reduced(arr, dim, center_pos):
         (i - center_pos[0], i+(dim[0] - (center_pos[0] + 1) + 1)),
         (j - center_pos[1], j+(dim[1] - (center_pos[1] + 1) + 1)))
              for j in range(start_m, end_m)] for i in range(start_n, end_n)]
-             
+
+def get_windows_reduced_inds(arr, dim, center_pos):
+    matrix_n, matrix_m = gdim(arr)
+    start_n, start_m = center_pos
+    end_n = matrix_n - (dim[0] - (center_pos[0] + 1))
+    end_m = matrix_m - (dim[1] - (center_pos[1] + 1))
+    return [[( 
+        (i - center_pos[0], i+(dim[0] - (center_pos[0] + 1) + 1)),
+        (j - center_pos[1], j+(dim[1] - (center_pos[1] + 1) + 1))
+        ) for j in range(start_m, end_m)] for i in range(start_n, end_n)]
+ 
 def apply_operation(arr, dim, center_pos, op, reduce_dim=True, edge_v=0):
     rm = get_windows(arr, dim, center_pos, reduce_dim=reduce_dim, edge_v=edge_v)
     n, m = gdim(rm)
@@ -169,9 +180,19 @@ def flen(arr):
     else:
         return 1
 
+def geq_flex(v1, v2):
+    if type(v1) is list and type(v2) is list:
+        return all([v1[i] >= v2[i] for i in range(len(v1))])
+    elif type(v1) is list and type(v2) is not list:
+        return all([v1[i] >= v2 for i in range(len(v1))])
+    elif type(v1) is not list and type(v2) is list:
+        return all([v1 >= v2[i] for i in range(len(v2))])
+    else:
+        return v1 >= v2
+
 def transpose_arr(arr):
     n, m = gdim(arr)
-    return [[arr[j][i] for j in range(m)] for i in range(n)]
+    return [[arr[i][j] for i in range(n)] for j in range(m)]
 
 def l_to_array(l):
     n, m = gdim(l)
@@ -196,3 +217,73 @@ def splitl(l, n):
 
 def map_arr(arr, f):
     return [[f(j) for j in i] for i in arr]
+
+def kronecker_prod(a, b):
+    m, n = gdim(a)
+    p, q = gdim(b)
+    
+    return [[
+        a[i//p][j//q]*b[i%p][j%q]
+    for j in range(q*n)] for i in range(p*m)]
+
+def hglue(a, b):
+    return [a[i] + b[i] for i in range(len(a))]
+
+def vglue(a, b):
+    return a + b
+
+def id_arr(n):
+    return [[1 if i == j else 0 for j in range(n)] for i in range(n)]
+
+def dist_flex(v1, v2):
+    return mdnorm(sub_flex(v1, v2))
+    
+def mdnorm(l):
+    return norm(flatten_arr(l))
+
+def norm(l):
+    return sqrt(sum([i**2 for i in l]))
+
+def l_sub(v1, v2):
+    return [v1[i] - v2[i] for i in range(len(v1))]
+
+def l_sub_sc_l(v1, v2):
+    return [v1 - v2[i] for i in range(len(v1))]
+
+def l_sub_sc_r(v1, v2):
+    return [v1[i] - v2 for i in range(len(v1))]
+
+def sub_flex(v1, v2):
+    if type(v1) is list and type(v2) is list:
+        return l_sub(v1, v2)
+    elif type(v1) is list and type(v2) is not list:
+        return l_sub_sc_r(v1, v2)
+    elif type(v1) is not list and type(v2) is list:
+        return l_sub_sc_l(v2, v1)
+    else:
+        return v1 - v2
+
+def rgb_gray(r, g, b):
+    return max(1, 0.226*r + 0.7152*g + 0.0722*b)
+
+def zeroes_arr(n, m):
+    return [[0 for j in range(m)] for i in range(n)]
+
+def dglue(a, b):
+    n, m = gdim(a)
+    p, q = gdim(b)
+    
+    up_arr = hglue(a, zeroes_arr(n, q))
+    down_arr = hglue(zeroes_arr(p, m), b)
+    
+    return vglue(up_arr, down_arr)
+
+def normalize(v):
+    return [i/norm(v) for i in v]
+
+
+def mask_arr(m, e, dim):
+    l = list(zip(flatten_arr(m), flatten_arr(e)))
+    rl = list(map(lambda x: x[0], filter(lambda x: x[1] > 0, l)))
+    
+    return unflatten_arr(rl, dim)
